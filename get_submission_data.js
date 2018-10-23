@@ -32,7 +32,10 @@ let getPrizes = function(divs) {
 }
 
 let getPrizeList = function(text) {
-    return text.split(":")[1].trim().split(",");
+    let prizes = text.split(":")[1].trim().split(",").map(function(str) {
+        return str.trim();
+    });
+    return prizes;
 }
 
 // dev post is ultimately paginated... so we have to scrap page by page
@@ -65,7 +68,6 @@ let getSubmissionInfoOfPage = function(page) {
 
         let prizes = getPrizeList(prizesText);
 
-        console.log({"title": title, "prizes": prizes});
         submissions.push({"title": title, "prizes": prizes});
     }
 
@@ -116,8 +118,6 @@ let main = function() {
     return submissions;
 }
 
-let result = main();
-
-console.log(result);
+var result = main();
 
 result
