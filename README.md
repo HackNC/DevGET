@@ -24,7 +24,7 @@ Log in to Devpost, after installing the extension. Go to Account -> Manage Hacka
 
 6. Select the directory of this repo that you cloned earlier
 
-# Contribution
+# Documentation
 
 `get_submission_data.js` contains the code for parsing the Devpost page and
 downloading the subsequent html pages specific for each submission. It formats
