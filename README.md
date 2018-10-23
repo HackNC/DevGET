@@ -14,13 +14,13 @@ Log in to Devpost, after installing the extension. Go to Account -> Manage Hacka
 1. Clone the repo
 
 2. Peruse Chrome's extension [getting started tutorial](https://developer.chrome.com/extensions/getstarted) at your leisure
-  * We will walk through the gist of it in the following steps
+   * We will walk through the gist of it in the following steps
 
 3. In Chrome, go to `chrome://extensions`
 
 4. Toggle the `Developer Mode` switch on the page
 
-5. Click `LOAD UNPACKED`
+5. Click `Load unpacked`
 
 6. Select the directory of this repo that you cloned earlier
 
