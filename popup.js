@@ -1,5 +1,9 @@
 let contentDiv = document.getElementById("content");
 let generateBtn = document.getElementById("gencsvs");
+let loadingDiv = document.createElement("div");
+let loading = document.createElement("p");
+loading.innerText = "Loading...";
+loadingDiv.appendChild(loading);
 
 let getSpreadsheets = function(results) {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -57,11 +61,13 @@ let downloadAllCsvs = function(results) {
 }
 
 generateBtn.onclick = function(element) {
+    contentDiv.appendChild(loadingDiv);
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
         chrome.tabs.executeScript(
             tabs[0].id,
             {file: "get_submission_data.js"},
             function (r) {
+                loadingDiv.remove();
                 let result = r[0];
                 getSpreadsheets(result);
                 getPrizeCsvs(result);
