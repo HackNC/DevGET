@@ -24,7 +24,9 @@ let getSpreadsheets = function(results) {
     let csvContent = "data:text/csv;charset=utf-8,";
 
     for (let i = 0 ; i < results.length ; i++) {
-        let row = `${i}, ${results[i]['title']}`;
+        let escapedTitle = results[i]['title']
+            .replace(/"/g, "\\\"");
+        let row = `${i}, "${escapedTitle}"`;
         csvContent += row + "\r\n";
     }
 
