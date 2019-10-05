@@ -1,12 +1,5 @@
 // block scoping!!! fuck js
 {
-    // Since document is a global singleton, you cannot run `DOMElt.getElementById`,
-    // this makes querying other xhr-requested pages difficult. Thus they can use
-    // this helper function instead (which travses the DOM tree.. so it's a little
-    // bit unoptimized)
-    // NOTE: domElt must be a domElt, i.e., don't use this on `document`, instead,
-    // do
-    // getEltById(document.documentElement, id)
     let getEltById = function(domElt, id) {
         if (domElt.getAttribute("id") == id) {
             return domElt;
@@ -23,22 +16,15 @@
         return null;
     }
 
-    let getPrizes = function(divs) {
-        for (let i = 0 ; i < divs.length ; i++) {
-            if (divs[i].getAttribute('id') == 'opt_in_prizes') {
-                return divs[i];
-            }
-        }
-
-        return null;
-    }
-
-    let getPrizeList = function(text) {
-        let prizes = text.split(":")[1].trim().split(",").map(function(str) {
-            return str.trim();
+    let sendMessagePromise = function(request, callback) {
+        return new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage(request, res => {
+                callback(res);
+                resolve();
+            });
         });
-        return prizes;
-    }
+    };
+
 
     // dev post is ultimately paginated... so we have to scrap page by page
     let getSubmissionInfoOfPage = function(page) {
@@ -46,34 +32,30 @@
             getEltById(page, 'moderate-submissions')
             .getElementsByTagName("tbody")[0]; 
 
-        let submissions = [];
+        var p = Promise.resolve();
 
-        for (let i = 1, row ; row = table.rows[i] ; i++) { 
-            let submission = row.cells[2].getElementsByTagName("div")[0]; 
-            let title = submission.getElementsByTagName("p")[0].innerText;
-            let projectLink =
-                submission
-                .getElementsByTagName("p")[0]
-                .getElementsByTagName("a")[0].href;
-
-            let request = new XMLHttpRequest();
-            // we set async to false, just because performance isn't of much
-            // importance here...
-            request.open("GET", projectLink, false);
-            request.send(null);
-
-            let projectPage = document.createElement("html");
-            projectPage.innerHTML = request.responseText;
-            // this is annoying... turns out you cannot do '.getElementById' on DOM
-            // elts
-            let prizesText = getEltById(projectPage, 'opt_in_prizes').innerText;
-
-            let prizes = getPrizeList(prizesText);
-
-            submissions.push({"title": title, "prizes": prizes});
+        for (let i = 0, row ; row = table.rows[i] ; i++) { 
+            p = p.then(() => {
+                let submission = row.cells[1].getElementsByTagName("div")[0]; 
+                let title = submission.getElementsByTagName("p")[0].innerText;
+                let projectLink =
+                    submission
+                    .getElementsByTagName("p")[0]
+                    .getElementsByTagName("a")[0].href;
+                console.log(projectLink);
+                return sendMessagePromise(
+                    {
+                        contentScriptQuery: 'fetchSubmissionPage', 
+                        title: title,
+                        page_url: projectLink
+                    },
+                    prizeList => {
+                        console.log(prizeList);
+                    });
+            });
         }
 
-        return submissions;
+        return p;
     }
 
     let getAllPageElts = function() {
@@ -101,26 +83,32 @@
         });
 
         return pagesElts;
-    }
+    };
 
-    let main = function() {
+    let main = async function() {
+        console.log("ENTERED MAIN");
         let pages = getAllPageElts();
 
-        let submissions = []
+        var p = Promise.resolve();
 
         pages.forEach(function (pg) {
-            let pgSubmissions = getSubmissionInfoOfPage(pg);
-            pgSubmissions.forEach(function(obj) {
-                if (obj) {
-                    submissions.push(obj)
-                }
-            });
+            p = p.then(() =>
+                getSubmissionInfoOfPage(pg)
+            );
         });
 
-        return submissions;
-    }
+        p.then(() => 
+            chrome.runtime.sendMessage(
+                {
+                    contentScriptQuery: "finished"
+                },
+                res => {}
+            ));
 
-    var result = main();
+        return await p;
+    };
 
-    result
+    (async function() {
+        return await main();
+    })();
 }

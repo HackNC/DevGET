@@ -1,3 +1,18 @@
+let sendMessagePromise = function(request, callback) {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(request, res => {
+            callback(res);
+            resolve();
+        });
+    });
+};
+
+const sleep = (milliseconds) => {
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
+
+
+
 let contentDiv = document.getElementById("content");
 let generateBtn = document.getElementById("gencsvs");
 let loadingDiv = document.createElement("div");
@@ -60,22 +75,67 @@ let downloadAllCsvs = function(results) {
     }
 }
 
-generateBtn.onclick = function(element) {
-    contentDiv.appendChild(loadingDiv);
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.executeScript(
-            tabs[0].id,
-            {file: "get_submission_data.js"},
-            function (r) {
-                loadingDiv.remove();
-                let result = r[0];
-                getSpreadsheets(result);
-                getPrizeCsvs(result);
+let finished = false;
 
-                let btn = document.createElement("button");
-                btn.onclick = downloadAllCsvs;
-                btn.innerText = "Download All CSVs";
-                contentDiv.appendChild(btn);
-            });
+let checkFinished = isFinished => {
+    if (isFinished) {
+        finished = isFinished
+    }
+    else {
+        sleep(500).then(() => {
+        chrome.runtime.sendMessage(
+            {contentScriptQuery : 'isFinished'},
+            checkFinished
+        )});
+    }
+};
+
+let sleepUntilFinished = (callback) => {
+    if (finished) {
+        callback();
+    }
+    else {
+        sleep(500).then(() => sleepUntilFinished(callback));
+    }
+}
+
+let genCsv = () => {
+    chrome.runtime.sendMessage({contentScriptQuery: 'getSubmissions'},
+    result => {
+        console.log("HOME STRETCH");
+        console.log(result);
+        loadingDiv.remove();
+        getSpreadsheets(result);
+        getPrizeCsvs(result);
+
+        let btn = document.createElement("button");
+        btn.onclick = downloadAllCsvs;
+        btn.innerText = "Download All CSVs";
+        contentDiv.appendChild(btn);
+    });
+}
+                        
+generateBtn.onclick = function(element) {
+    chrome.runtime.sendMessage({contentScriptQuery : 'reset'},
+    () => {
+        console.log("RESETED");
+        contentDiv.appendChild(loadingDiv);
+        chrome.tabs.query(
+            {active: true, currentWindow: true},
+            function(tabs) {
+                chrome.tabs.executeScript(
+                    tabs[0].id,
+                    {file: "get_submission_data.js"},
+                    r => {
+                        // will run until the thing is finished
+                        chrome.runtime.sendMessage(
+                            {contentScriptQuery : 'isFinished'},
+                            checkFinished);
+
+                        sleep(500).then(() => sleepUntilFinished(genCsv));
+                    }
+                )
+            }
+        );
     });
 };
